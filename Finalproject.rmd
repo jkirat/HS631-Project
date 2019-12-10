@@ -1,0 +1,361 @@
+---
+title: "Data Analysis and Visualization Project"
+author: "Jaskirandeep Kaur"
+date: "12/9/2019"
+output: html_document
+---
+
+This is my final project for HS631.
+It goes through data cleaning, analysis and visualization of the births data set.
+
+Dataset variables (1000 births):
+
+dad_age
+  Age of father of baby (years)
+  
+mom_age
+  Age of mother of baby (years)
+  
+maturity
+  Classify mother as of advanced maternal age or not (younger / advanced)
+  
+len_preg
+  Length of pregnancy (weeks)
+  
+is_premie
+  Classify baby as either premature or full-term (premie / fullterm)
+  
+num_visits
+  Number of visits to hospital during pregnancy
+  
+marital
+  Marital status of mother at time of birth (unmarried / married)
+  
+mom_wt_gain
+  Mother's weight gain during pregnancy (pounds)
+  
+bwt
+  Birth weight of baby (pounds)
+  
+low_bwt
+  Classify baby as either low birthweight or not (low / notlow)
+  
+sex
+  Sex of baby (female / male)
+  
+smoke
+  Smoking status of mother (nonsmoker / smoker)
+  
+mom_white
+  Classify mother as either white or not (nonwhite / white)
+  
+mom_age_level
+  Age level of mother of baby (teens, early20s, late20s, early30s, 35+)
+  
+Loading the data into a dataframe
+```{r}
+.libPaths('C:/Users/kirak/R')
+setwd('C:/Users/kirak/HS631')
+load(file = 'C:/Users/kirak/HS631/births.Rdat')
+```
+
+Loading Libraries
+```{r}
+library(ggplot2)
+library(plyr)
+library(corrplot)
+library("pwr")
+library(rgl)
+library(pscl)
+library(car)
+library (stats)
+```
+
+Cleaning the data of impossible values and turning those into NA's
+```{r}
+summary(births)
+#cleaning the data
+births$dad_age[births$dad_age == 999] <- NA
+births$len_preg[births$len_preg == 999] <- NA
+births$num_visits[births$num_visits == 999] <-NA
+births$mom_wt_gain[births$mom_wt_gain == 999] <- NA
+```
+
+Rearranging the ranks of factored variables in their right order and creating suitable labels.
+```{r}
+births$maturity<-factor(births$maturity, levels=c("younger","advnced"),labels=c("Younger","Advanced"))
+births$is_premie<-factor(births$is_premie, levels=c("premie","fullterm"),labels=c("Premie","Full-term"))
+births$marital<-factor(births$marital, levels=c("unmarried","married"),labels=c("Unmarried","Married"))
+births$low_bwt<-factor(births$low_bwt, levels=c("notlow","low"), labels=c("Not Low", "Low"))
+births$sex<-factor(births$sex, levels=c("female","male"), labels=c("Female","Male"))
+births$smoke<-factor(births$smoke, levels=c("nonsmoker","smoker"), labels=c("Non-Smoker","Smoker"))
+births$mom_age_level<-factor(births$mom_age_level, levels=c("teens","early20s","late20s","early30s","35+"),labels=c("Teens","Early 20's","Late 20's","Early 30's","35+"))
+births$mom_white<-factor(births$mom_white, levels=c("nonwhite","white"),labels=c("Non-White", "White"))
+summary(births)
+```
+
+
+Plotting Distributions of Univariate Variables.
+```{r}
+ggplot(births, aes(x=dad_age)) + geom_histogram(binwidth = 4, color="white",fill="blue") + ggtitle("Distribution of Fathers Age") + xlab("Age in years") + ylab("Count")
+ggplot(births, aes(x=mom_age)) + geom_histogram(binwidth = 4, color="white",fill="yellow") + ggtitle("Distribution of Mothers Age") + xlab("Age in years") + ylab("Count")
+ggplot(births, aes(x=maturity)) + geom_bar(color="white",fill=c("green","orange")) + ggtitle("Distribution of Mother's Maturity Status") + xlab("Mother's Maturity Status") + ylab("Count")
+ggplot(births, aes(x=len_preg)) + geom_density(color="white",fill="purple") + ggtitle("Distribution of Length of Pregnancy") + xlab("Length of Pregnancy in Weeks") + ylab("Count")
+ggplot(births, aes(x=is_premie)) + geom_bar(color="white",fill=c("green","orange","red")) + ggtitle("Distribution Baby's Maturity Status") + xlab("Baby's Maturity Status") + ylab("Count")
+ggplot(births, aes(x=num_visits)) + geom_density(color="white",fill="green") + ggtitle("Distribution of Number of Visits to the hospital") + xlab("Number of Hospital Visits") + ylab("Count")
+ggplot(births, aes(x=marital)) + geom_bar(color="white",fill=c("green","orange","red")) + ggtitle("Distribution of Number of Marital Status") + xlab("Marital Status") + ylab("Count")
+ggplot(births, aes(x=mom_wt_gain)) + geom_histogram(binwidth = 4, color="white",fill="yellow") + ggtitle("Distribution of Mothers Weight Gain") + xlab("Mother's Weight Gain in Pounds") + ylab("Count")
+ggplot(births, aes(x=bwt)) + geom_histogram(binwidth = 4, color="white",fill="green") + ggtitle("Distribution of Babies Birth Weight") + xlab("Baby's birth weight in pounds") + ylab("Count")
+ggplot(births, aes(x=low_bwt)) + geom_bar(color="white",fill=c("green","orange")) + ggtitle("Distribution of Low Birth Weight") + xlab("Birth weight status") + ylab("Count")
+ggplot(births, aes(x=sex)) + geom_bar(color="white",fill=c("yellow","blue")) + ggtitle("Distribution of Sex") + xlab("Sex of Baby") + ylab("Count")
+ggplot(births, aes(x=mom_white)) + geom_bar(color="white",fill=c("green","orange","red")) + ggtitle("Distribution of Mothers Ethnicity") + xlab("Race of Mother") + ylab("Count")
+ggplot(births, aes(x=mom_age_level)) + geom_bar(color="white",fill=c("green","orange","red","blue","purple")) + ggtitle("Distribution of Mothers Age Level") + xlab("Age in Categories") + ylab("Count")
+ggplot(births, aes(x=smoke)) + geom_bar(color="white",fill=c("green","red","orange")) + ggtitle("Distribution of Smoking Status") + xlab("Mother's Smoking Status") + ylab("Count")
+```
+
+Plotting Bivariate Distributions of Specific Variables
+```{r}
+plot(births$mom_age_level,births$num_visits,xlab="Mother's Age Levels", ylab="Number of visits to the Hospital")
+plot(births$smoke,births$low_bwt, xlab="Smoking Status", ylab="Birth weight Status")
+```
+Interpretation:
+The first plot shows that teens tend to have less number of hospital vistis will pregnant compared to that of the other 4 age levels. 
+The second plot shows that there is slightly more low birth weight status babies of mother's that do smoke compared to that of non-smoking mothers.
+
+
+Plotting Trivariate Distributions of Specific Variables.
+```{r}
+ggplot(births, aes(x=dad_age, y=mom_age, color=marital)) + geom_point() +  ggtitle("Relationship Between Mother's Age and Father's Age colored by Marital Status") + xlab("Father's Age in years") + ylab("Mother's Age in years")
+ggplot(births, aes(x=len_preg, y=bwt, color=smoke)) + geom_point() + ggtitle("Relationship between Length of Pregnancy and Babies birth weight colored by Smoking status") + xlab("Length of Pregnancy in weeks") + ylab("Babies birth weight in pounds")
+```
+Interpretation:
+The first plot shows a steady positive increase of both mother's and father's age. With most unmarried marital status below 25 years of age. 
+The second plot shows that as lenght of pregnancy increases so those that of the birthweight of the babies, which is expected. Also you can see that babies of mothers that do smoke tend to lie slightly below their peers.
+
+Power Analysis for Chisquared,Correlation and Two sample unpaired T-test.
+```{r}
+#chisquared power
+pwr.chisq.test(w =.3, df=1,N =1000 , sig.level =.05) 
+#calculate df
+```
+Interpretation:
+For an effect size of .3, a sample population of 1000, significance level at .05(The alpha cut off), and 1 degree of freedom. It shows a power of 1. Within these parameters the power of this study is ideal.
+
+
+```{r}
+#correlation power
+pwr.r.test(n =1000 , r = .1, sig.level = .05) 
+pwr.r.test(r = .1, sig.level = .05, power = .95) 
+```
+Interpretation:
+The first power test for correlation shows that with a significance level of .05(The alpha cut off), a sample size of 1000, and an effect size of .1. It shows a power of .87. Within these parameters the power of this study is good.
+The second power test for correlations shows that population sample need for a power of .95 is 1292.88.
+
+```{r}
+#ttest power
+count(births$low_bwt)
+pwr.t2n.test(n1=111, n2=889, d = .2, sig.level = .05 )
+pwr.t2n.test(n1=889, d = .2, sig.level = .05, power=.95 )
+pwr.t2n.test(n1=111, n2=889, sig.level = .05, power=.95 )
+```
+Interpretation:
+The first power test for the two sample unpaired t test shows that within these parameters the power analysis is at .51 which is decent but could be better.
+The second power analysis shows that for an effect size of .2, significance level of .05 and a power of .95. 513 is needed for the second sample size population to be.
+The third power analysis shows that for these parameters we will attain an effect size of .36
+
+
+Two Sample T-Test
+```{r}
+t.test(births$len_preg~births$low_bwt)
+t.test(births$mom_wt_gain~births$low_bwt)
+```
+Interpretation:
+First two sample unpaired t-test:
+The sample estimates show the average length of pregnancy in weeks for babies with low birth weight and not low birth weight within this sample population. The confidence interval shows that there is a 95 percent chance that the real population sample mean of length of pregnancy between low birth weight babies and not low birth weight babies will be between -6.41 to -4.62. The p value is <2.2e-16 which is well below the alpha cut off .05. With this information we reject the null hypothesis that there is no difference between the means of these two samples. Since there is clearly a difference between the two means and it is not equal to 0. 
+Second two sample unpaired t-test:
+The sample estimates show the average weight gain for mothers in pounds for babies with low birth weight and not low birth weight within this sample population. The confidence interval shows that there is a 95 percent chance that the real population sample mean of mother's weight gain between low birth weight babies and not low birth weight babies will be between -7.71 to -1.81. The p value is .0017 which is below the alpha cut off .05. With this information we reject the null hypothesis that there is no difference between the means of low birth weight and not low birth weight babies. The difference is not equal to 0. 
+
+
+Anova Test
+```{r}
+fit_an = lm(bwt ~ mom_age_level, data=births)
+summary(fit_an)
+a_mcv <- aov(fit_an)
+a_mcv
+```
+Interpretation:
+The results show that there is a significant difference in at least one of the groups means based on the p values within this model.
+
+Tukey Test
+```{r}
+a_mcv_tukey<- TukeyHSD(a_mcv)
+a_mcv_tukey
+plot(a_mcv_tukey , las=1 , col="brown")
+```
+Interpretation:
+The groups with the largest difference in means are early20s-teens, late20s-teens, early30s-teens, 35+-teens.
+
+Chi-squared Test
+```{r}
+chisq.test(births$low_bwt, births$is_premie)
+```
+Interpretation:
+We reject the Null hypothesis of the variables being independent. According to a pvalue of <2.2e-16 The variables are dependent. 
+
+Wilcoxon-Mann Whitney test
+```{r}
+wilcox.test(bwt ~ smoke, data=births)
+```
+Interpretation:
+The p-value is 0.005622, which is less than the significance level alpha cut off of 0.05. We can conclude that median birthweight for non smoking mothers and smoking mothers is different. 
+
+Pearson Correlation of data set 
+```{r}
+c1<-cor(births[,c(1,2,4,6,8,9)], use="pairwise.complete.obs")
+c1
+corrplot(c1, method="number")
+```
+Interpretation:
+According to this plot we can see that Father's age and Mother's age is highly correlated at .78. We can also see length of pregnancy and babies birth weight at .67
+
+Subsetting Births into Births2 and changing Factored Variables into Numeric.
+```{r}
+births2<-births
+births2$maturity <-as.numeric(births2$maturity)
+births2$is_premie <- as.numeric(births2$is_premie)
+births2$marital <- as.numeric(births2$marital)
+births2$low_bwt <- as.numeric(births2$low_bwt)
+births2$sex <- as.numeric(births2$sex)
+births2$smoke <- as.numeric(births2$smoke)
+births2$mom_white <- as.numeric(births2$mom_white)
+births2$mom_age_level <- as.numeric(births2$mom_age_level)
+```
+
+Spearman Correlation of Births2 data set
+```{r}
+c2<-cor(births2, use="pairwise.complete.obs", method="spearman")
+c2
+corrplot(c2, method="number")
+```
+Interpretation:
+Using Spearman correlation we can see that Father's Age and Mother's age is highly correlated. Also, Maturity Status and Mother's age. which is expected since maturity is defined in this data set at mother's maturity status.
+Length of Pregnancy and Premature status is also highly correlated at .63
+Low birth weight status and Premature status of the baby is also highly correlated.
+Lastly, Mother's age and Mother's age level is highly correlated at .97 and it is expected.
+
+
+Subsetting Births into Births3 and Imputing the Data
+```{r}
+births3<-births
+summary(births2)
+cor(births2, use= "pairwise.complete.obs")
+births3$dad_age <- NULL
+births3$len_preg[is.na(births3$len_preg)] <- mean(births2$len_preg,na.rm=T)
+births3$is_premie[is.na(births3$is_premie)] <- "Full-term"
+births3$num_visits[is.na(births3$num_visits)] <- mean(births2$num_visits,na.rm=T)
+births3$marital[is.na(births3$marital)] <- "Married"
+births3$mom_wt_gain[is.na(births3$mom_wt_gain)] <- mean(births2$mom_wt_gain,na.rm=T)
+births3$smoke[is.na(births3$smoke)] <- "Non-Smoker"
+births3$mom_white[is.na(births3$mom_white)] <- "White"
+summary(births3)
+```
+Interpretation:
+Father's age has a large number of NA's at 171. This had to be removed by turning the column null. Mother's age has a good correlation between that variable at .78 and will be used in liue of that.
+For numeric variables the mean is used to impute the NA's and for the factored variables the median is used to impute the NA's
+
+Fitting a Linear Regression Model
+First Model
+```{r}
+fitlin1<- lm(bwt~dad_age+mom_age+maturity+len_preg+is_premie+num_visits+marital+mom_wt_gain+low_bwt+sex+smoke+mom_white+mom_age_level, data=births)
+summary(fitlin1)
+```
+Interpretation:
+This model has an adjusted r-squared of .59. This predits 59 percent of the variablity of this model. This can be a better model by removing the insignificant variables. Before removing the insignificant variables there is a variable that is highly correlated and is an alias to bwt and that is low_bwt intially we need to remove this first.
+
+Second Model
+```{r}
+fitlin2<- lm(bwt~dad_age + mom_age + maturity + len_preg + is_premie + num_visits + 
+    marital + mom_wt_gain + sex + smoke + mom_white + 
+    mom_age_level, data=births)
+summary(fitlin2)
+```
+Interpretation:
+The adjusted R-squared for this model has decreased to .46. But now see that prematurity status now has a significant p-value of .001. From here we will take out all the insignificant values and run a third model.
+
+Third Model
+```{r}
+fitlin3<- lm(bwt~len_preg+is_premie+marital+mom_wt_gain+sex+smoke+mom_white, data=births)
+summary(fitlin3)
+plot(fitlin2,1)
+```
+Interpretation:
+The adjusted R-squared for this model is .49 better compared to the previous model. It This predits 49 percent of the variablity of this model. Also, it includes all the significant variables.It's not the best fit but with the data set this is the most it can reach. 
+Final Linear Model
+```{r}
+finalfitlin<-lm(bwt ~ len_preg + sex + marital + is_premie + mom_wt_gain + smoke + mom_white, data=births)
+summary(finalfitlin)
+plot(finalfitlin,1)
+```
+Interpretation:
+This is the final model for the final model for linear regression in this data set.
+The formulas is:
+birth weight = .28* length of pregnancy + .39* Sex of Baby(Male) + .25* Marital Status(Married) + .52* Premature Status of Baby (Full-Term)+ .008* Mother's weight gain - .38* Smoking Status(Smoker) + .22* Mother's Race(White)
+
+It is interesting to point out specific variables within this model, such as;
+For male babies as compared with female babies birth weight increases by .39 pounds on average when all other variables in the model are held constant
+For married marital status as compared with unmarried birth weight increases by .25 pounds on average when all other variables in the model are held constant
+For smoking mothers as compared with non-smoking mothers, birth weight decreases by .38 pounds on average when all other variables in the model are held constant
+For white mothers as compared with non-white mothers birth weight increases by .22 pounds on average when all other variables in the model are held constant
+
+Residuals VS. Fitted Plot
+There is a slight pattern, but with this current data set it is a decent fit for this model.
+
+Logistic Regression Model
+```{r}
+fit_null <- glm(low_bwt ~ 1, family = binomial(), data = births3)
+summary(fit_null)
+
+fit_all <-glm(low_bwt~., family=binomial(), data=births3)
+summary(fit_all)
+pR2(fit_all)
+
+fit2<-glm(low_bwt ~ mom_age+len_preg+is_premie+num_visits+marital+mom_wt_gain+sex+smoke+mom_white, family= binomial(), data =births3)
+summary(fit2)
+```
+Interpretation:
+Before running the step function we create logistic models for null and main effects. After looking at the summary of all main effects model it is clear that there are a number of variables that are strongly correlated to each other.An indicator would be the perfect McFadden score of 1 which is unrealistic. Also, the NA's for mom_age_level 35+. After removing those variables we ended up with a fit2 model that will be used as an upper limit on the step function. 
+
+Running Step Function to find the best fit model.
+```{r}
+fit_step1 = step(fit_null, scope=list(lower=fit_null, upper=fit2),direction="both")
+summary(fit_step1)
+```
+Interpretation:
+After running the step function we are able to find the best model for this data set. with a low AIC of 408.79.
+glm(formula = low_bwt ~ len_preg + marital, family = binomial(), 
+    data = births3)
+
+Final Logistic Model:
+```{r}
+finlogfit<- glm(low_bwt ~ len_preg + marital, family = binomial(), data=births3)
+summary(finlogfit)
+pR2(finlogfit)
+expfit<-exp(cbind(OR = coef(finlogfit), confint(finlogfit)))
+expfit
+```
+Interpretation:
+This is the final model for logistic regression. 
+low_bwt ~ len_preg + marital
+The McFadden score for pseudo r-squared is a good fit at .42.
+
+Log Odds:
+For every week increase in length of pregnancy of the mother, the log odds of having low birth weight for the baby decreases by -0.69634 on average, when all other variables in the model are held constant.
+For married marital status as compared with unmarried the log odds of having low birth weight for the baby decreases by -0.63527 on average.
+
+Odds:
+For every week increase in length of pregnancy of the mother, the odds of having low birth weight for the baby is multiplied by exp(coef)= 1.646099 (ie: a decrease of 64.6%) on average,when all other variables in the model are held constant
+For married marital status as compared with unmarried, the odds of having low birth weight for the baby is multiplied by exp(coef)= 1.698582 (ie: a decrease of 69.86%) on average when all other variables in the model are held constant.
+
+
+
+
